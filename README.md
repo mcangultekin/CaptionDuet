@@ -33,10 +33,11 @@ A temporary extension is removed when Safari quits; repeat steps 2–3 after reo
 
 ## Use
 
-- Click the CaptionDuet icon in the toolbar to switch it on or off and to set the top
-  and bottom languages, text size, background opacity and the bottom line's colour.
-- The interface is in English by default. The menu next to the on/off switch changes it
-  to Spanish, Portuguese, French, German, Italian, Turkish, Russian, Japanese, Korean
+- Click the CaptionDuet icon in the toolbar to switch it on or off and to choose the top
+  and bottom languages. A message appears there only when something needs your attention.
+- **Settings** holds the rest: text size, background opacity, the bottom line's colour and
+  the interface language.
+- The interface is in English by default and can be changed to Spanish, Portuguese, French, German, Italian, Turkish, Russian, Japanese, Korean
   or Simplified Chinese.
 - The language menus list the open video's own subtitle tracks first, then every
   language YouTube can auto-translate to. The status line belongs to the video in the
@@ -72,8 +73,8 @@ the video.
 
 The manifest loads `inject.js` straight into the page with `"world": "MAIN"` (confirmed
 in Safari). If the page script does not answer, the extension falls back to reading the
-player's request from the Performance API. The popup's status line shows which path is
-in use: "full mode" or "fallback mode".
+player's request from the Performance API. The details line at the bottom of Settings
+shows which path is in use: "full mode" or "fallback mode".
 
 ## Tests
 

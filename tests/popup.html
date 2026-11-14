@@ -48,7 +48,9 @@
         ],
       };
       const other = { status: { key: "noCaptions" }, tracks: [], translations: [], at: 99 };
-      const RUNNING = "Status: Working (full mode): 10 + 10 lines. Bottom language not found.";
+      // Main view: only what the viewer needs. Settings panel: the technical line.
+      const notice = () => ($("notice").hidden ? "(hidden)" : $("notice").textContent);
+      const tech = () => ($("tech").hidden ? "(hidden)" : $("techText").textContent);
       // A saved language the video does not list, and a newer entry from another tab.
       const store = { secondary: "xx", cdStates: { MINE: { ...tabState, at: 1 }, OTHER: other } };
       window.chrome = {
@@ -74,7 +76,9 @@
 
       const $ = (id) => document.getElementById(id);
       const groups = (id) => [...$(id).querySelectorAll("optgroup")].map((g) => g.label + ": " + [...g.children].map((o) => o.textContent).join(", "));
-      check("status is this tab's video, not the newest entry", $("status").textContent === RUNNING, $("status").textContent);
+      check("status is this tab's video, not the newest entry", notice() === "Bottom language not found.", notice());
+      check("technical details live in the settings panel", tech() === "Working (full mode): 10 + 10 lines." && $("tech").closest("details") === $("more"), tech());
+      check("settings are folded away by default", !$("more").open && $("fontScale").closest("details") === $("more") && $("uiLang").closest("details") === $("more"));
       check("the interface is English by default", $("uiLang").value === "en" && document.querySelector('[data-i18n="top"]').textContent === "Top subtitle" && $("primary").options[0].textContent === "The video's own language");
       check("lists the video's own tracks, then translations", JSON.stringify(groups("primary")) === JSON.stringify(["Subtitles in this video: İngilizce (auto-generated), Almanca", "Automatic translation: Japonca, Türkçe"]), JSON.stringify(groups("primary")));
       check("fixed choices stay first", $("secondary").options[0].value === "off" && $("secondary").options[1].value === "auto" && $("primary").options[0].value === "auto");
@@ -87,19 +91,30 @@
       check("every interface language has every text", I18nComplete() === "", I18nComplete());
 
       push({ MINE: { ...tabState, at: 1 }, OTHER: { ...other, status: { key: "off" }, at: 100 } });
-      check("another tab's update is ignored", $("status").textContent === RUNNING, $("status").textContent);
+      check("another tab's update is ignored", notice() === "Bottom language not found.", notice());
+      push({ MINE: { ...tabState, status: { key: "running", mode: "full", a: 10, b: 10, missing: "" }, at: 2 }, OTHER: other });
+      check("nothing to say while subtitles are showing", notice() === "(hidden)" && tech() === "Working (full mode): 10 + 10 lines.", notice() + " / " + tech());
+      push({ MINE: { ...tabState, status: { key: "downloadFailed", mode: "fallback", token: false }, at: 2 }, OTHER: other });
+      check("a failure is plain in the main view, technical in the details", notice() === "Couldn't download the subtitles." && tech() === "fallback mode · token: missing", notice() + " / " + tech());
       push({ MINE: { ...tabState, status: { key: "waitingAd" }, at: 2 }, OTHER: other });
-      check("this tab's updates are shown", $("status").textContent === "Status: Waiting for the ad to finish…", $("status").textContent);
+      check("this tab's updates are shown", notice() === "Waiting for the ad to finish…" && tech() === "(hidden)", notice() + " / " + tech());
 
       // Switching the interface language re-words everything at once, status included.
       $("uiLang").value = "tr";
       $("uiLang").dispatchEvent(new Event("change"));
       check("language switch: labels", document.querySelector('[data-i18n="top"]').textContent === "Üst altyazı" && $("secondary").options[0].textContent === "Kapalı", document.querySelector('[data-i18n="top"]').textContent);
-      check("language switch: status", $("status").textContent === "Durum: Reklamın bitmesi bekleniyor…", $("status").textContent);
+      check("language switch: status", notice() === "Reklamın bitmesi bekleniyor…", notice());
       check("language switch: saved", JSON.stringify(saved[saved.length - 1]) === '{"uiLang":"tr"}', JSON.stringify(saved));
       check("language switch keeps the chosen subtitle language", $("secondary").value === "ja", $("secondary").value);
       $("uiLang").value = "en";
       $("uiLang").dispatchEvent(new Event("change"));
+
+      $("enabled").checked = false;
+      $("enabled").dispatchEvent(new Event("change"));
+      push({ MINE: { ...tabState, status: { key: "off" }, at: 4 }, OTHER: other });
+      check("switched off: controls step back, no message", document.body.classList.contains("off") && notice() === "(hidden)", notice());
+      $("enabled").checked = true;
+      $("enabled").dispatchEvent(new Event("change"));
       check("a status update keeps the chosen language", $("secondary").value === "ja", $("secondary").value);
       push({ MINE: { status: { key: "noCaptions" }, tracks: [], translations: [], at: 3 } });
       check("without track data the built-in list is used", groups("primary").length === 1 && /^Automatic translation: English, Spanish/.test(groups("primary")[0]), JSON.stringify(groups("primary")).slice(0, 80));

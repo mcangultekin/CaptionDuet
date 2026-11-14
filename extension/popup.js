@@ -31,13 +31,25 @@ let lastState = null; // newest state of this tab's video, re-worded when the la
 const lang = () => (I18n.has(settings.uiLang) ? settings.uiLang : "en");
 const tr = (key, params) => I18n.t(lang(), key, params);
 
+// The main view only speaks up when something needs attention; the technical
+// line (path in use, line counts) sits in the settings panel.
+function showStatus() {
+  const status = lastState && lastState.status;
+  const notice = I18n.notice(lang(), status);
+  $("notice").textContent = notice;
+  $("notice").hidden = !notice;
+  const tech = I18n.details(lang(), status);
+  $("techText").textContent = tech;
+  $("tech").hidden = !tech;
+}
+
 // Put the interface texts into the page (and again whenever the language changes).
 function localize() {
   document.documentElement.lang = lang();
   for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = tr(el.dataset.i18n);
   for (const el of document.querySelectorAll("[data-i18n-title]")) el.title = tr(el.dataset.i18nTitle);
   for (const el of document.querySelectorAll("[data-i18n-label]")) el.setAttribute("aria-label", tr(el.dataset.i18nLabel));
-  $("status").textContent = tr("status", { text: I18n.statusText(lang(), lastState && lastState.status) });
+  showStatus();
   fillLanguages();
 }
 
@@ -71,6 +83,7 @@ function fillLanguages() {
 function show(s) {
   settings = s;
   $("enabled").checked = s.enabled;
+  document.body.classList.toggle("off", !s.enabled);
   $("uiLang").value = lang();
   localize();
   $("fontScale").value = s.fontScale;
@@ -94,7 +107,10 @@ $("uiLang").addEventListener("change", (e) => {
   save({ uiLang: e.target.value });
   localize();
 });
-$("enabled").addEventListener("change", (e) => save({ enabled: e.target.checked }));
+$("enabled").addEventListener("change", (e) => {
+  document.body.classList.toggle("off", !e.target.checked);
+  save({ enabled: e.target.checked });
+});
 $("primary").addEventListener("change", (e) => {
   settings.primary = e.target.value;
   save({ primary: e.target.value });
@@ -117,7 +133,7 @@ $("background").addEventListener("input", (e) => {
 function showState(st) {
   if (!st) return;
   lastState = st;
-  $("status").textContent = tr("status", { text: I18n.statusText(lang(), st.status) });
+  showStatus();
   const tracks = st.tracks || [];
   const translations = st.translations || [];
   // Rebuild the menus only when the lists changed, not on every status line.
