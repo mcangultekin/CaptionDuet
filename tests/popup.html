@@ -14,6 +14,19 @@
       out.push(`${ok ? "ok  " : "FAIL"} ${name}${ok ? "" : "  " + detail}`);
     };
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    // Lists any language that lacks a text English has, or leaves a {placeholder} out.
+    const I18nComplete = () => {
+      const { T, LANGS } = globalThis.CaptionDuetI18n;
+      const holes = (s) => (s.match(/\{\w+\}/g) || []).sort().join();
+      const bad = [];
+      for (const [code] of LANGS) {
+        for (const key of Object.keys(T.en)) {
+          if (!T[code] || !(key in T[code])) bad.push(`${code}.${key} missing`);
+          else if (holes(T[code][key]) !== holes(T.en[key])) bad.push(`${code}.${key} placeholders`);
+        }
+      }
+      return bad.join("; ");
+    };
     try {
       const html = await (await fetch("../extension/popup.html")).text();
       const doc = new DOMParser().parseFromString(html, "text/html");
@@ -24,7 +37,7 @@
       let changed = null;
       const push = (states) => changed({ cdStates: { newValue: states } }, "local");
       const tabState = {
-        status: "Çalışıyor (tam mod, manifest): 10 + 10 satır.",
+        status: { key: "running", mode: "full", a: 10, b: 10, missing: "bottom" },
         tracks: [
           { code: "en", name: "İngilizce", auto: true },
           { code: "de", name: "Almanca", auto: false },
@@ -34,7 +47,8 @@
           { code: "tr", name: "Türkçe" },
         ],
       };
-      const other = { status: "Başka sekme", tracks: [], translations: [], at: 99 };
+      const other = { status: { key: "noCaptions" }, tracks: [], translations: [], at: 99 };
+      const RUNNING = "Status: Working (full mode): 10 + 10 lines. Bottom language not found.";
       // A saved language the video does not list, and a newer entry from another tab.
       const store = { secondary: "xx", cdStates: { MINE: { ...tabState, at: 1 }, OTHER: other } };
       window.chrome = {
@@ -47,7 +61,7 @@
         },
         tabs: { query: async () => [{ id: 7, url: "https://www.youtube.com/watch?v=MINE" }] },
       };
-      for (const src of ["../extension/core.js", "../extension/popup.js"]) {
+      for (const src of ["../extension/core.js", "../extension/i18n.js", "../extension/popup.js"]) {
         await new Promise((ok, bad) => {
           const s = document.createElement("script");
           s.src = src;
@@ -60,8 +74,9 @@
 
       const $ = (id) => document.getElementById(id);
       const groups = (id) => [...$(id).querySelectorAll("optgroup")].map((g) => g.label + ": " + [...g.children].map((o) => o.textContent).join(", "));
-      check("status is this tab's video, not the newest entry", $("status").textContent === "Durum: " + tabState.status, $("status").textContent);
-      check("lists the video's own tracks, then translations", JSON.stringify(groups("primary")) === JSON.stringify(["Bu videodaki altyazılar: İngilizce (otomatik), Almanca", "Otomatik çeviri: Japonca, Türkçe"]), JSON.stringify(groups("primary")));
+      check("status is this tab's video, not the newest entry", $("status").textContent === RUNNING, $("status").textContent);
+      check("the interface is English by default", $("uiLang").value === "en" && document.querySelector('[data-i18n="top"]').textContent === "Top subtitle" && $("primary").options[0].textContent === "The video's own language");
+      check("lists the video's own tracks, then translations", JSON.stringify(groups("primary")) === JSON.stringify(["Subtitles in this video: İngilizce (auto-generated), Almanca", "Automatic translation: Japonca, Türkçe"]), JSON.stringify(groups("primary")));
       check("fixed choices stay first", $("secondary").options[0].value === "off" && $("secondary").options[1].value === "auto" && $("primary").options[0].value === "auto");
       check("defaults are selected", $("primary").value === "auto" && $("enabled").checked === true);
       check("an unlisted saved language still shows as selected", $("secondary").value === "xx");
@@ -69,14 +84,25 @@
       $("secondary").value = "ja";
       $("secondary").dispatchEvent(new Event("change"));
       check("choosing a language saves it", JSON.stringify(saved) === '[{"secondary":"ja"}]', JSON.stringify(saved));
+      check("every interface language has every text", I18nComplete() === "", I18nComplete());
 
-      push({ MINE: { ...tabState, at: 1 }, OTHER: { ...other, status: "Yine başka sekme", at: 100 } });
-      check("another tab's update is ignored", $("status").textContent === "Durum: " + tabState.status, $("status").textContent);
-      push({ MINE: { ...tabState, status: "Reklamın bitmesi bekleniyor…", at: 2 }, OTHER: other });
-      check("this tab's updates are shown", $("status").textContent === "Durum: Reklamın bitmesi bekleniyor…", $("status").textContent);
+      push({ MINE: { ...tabState, at: 1 }, OTHER: { ...other, status: { key: "off" }, at: 100 } });
+      check("another tab's update is ignored", $("status").textContent === RUNNING, $("status").textContent);
+      push({ MINE: { ...tabState, status: { key: "waitingAd" }, at: 2 }, OTHER: other });
+      check("this tab's updates are shown", $("status").textContent === "Status: Waiting for the ad to finish…", $("status").textContent);
+
+      // Switching the interface language re-words everything at once, status included.
+      $("uiLang").value = "tr";
+      $("uiLang").dispatchEvent(new Event("change"));
+      check("language switch: labels", document.querySelector('[data-i18n="top"]').textContent === "Üst altyazı" && $("secondary").options[0].textContent === "Kapalı", document.querySelector('[data-i18n="top"]').textContent);
+      check("language switch: status", $("status").textContent === "Durum: Reklamın bitmesi bekleniyor…", $("status").textContent);
+      check("language switch: saved", JSON.stringify(saved[saved.length - 1]) === '{"uiLang":"tr"}', JSON.stringify(saved));
+      check("language switch keeps the chosen subtitle language", $("secondary").value === "ja", $("secondary").value);
+      $("uiLang").value = "en";
+      $("uiLang").dispatchEvent(new Event("change"));
       check("a status update keeps the chosen language", $("secondary").value === "ja", $("secondary").value);
-      push({ MINE: { status: "Bu videoda altyazı yok.", tracks: [], translations: [], at: 3 } });
-      check("without track data the built-in list is used", groups("primary").length === 1 && /^Otomatik çeviri: İngilizce, Türkçe/.test(groups("primary")[0]), JSON.stringify(groups("primary")).slice(0, 80));
+      push({ MINE: { status: { key: "noCaptions" }, tracks: [], translations: [], at: 3 } });
+      check("without track data the built-in list is used", groups("primary").length === 1 && /^Automatic translation: English, Spanish/.test(groups("primary")[0]), JSON.stringify(groups("primary")).slice(0, 80));
     } catch (e) {
       failed++;
       out.push("CRASH " + (e && e.stack ? e.stack : e));

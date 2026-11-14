@@ -41,7 +41,10 @@
           for (const k in patch) changes[k] = { oldValue: store[k], newValue: patch[k] };
           Object.assign(store, patch);
           // What the popup reads for this video.
-          if (patch.cdStates && patch.cdStates.VID) store.cdStatus = patch.cdStates.VID.status;
+          if (patch.cdStates && patch.cdStates.VID) {
+            const st = patch.cdStates.VID.status || {};
+            store.cdStatus = `${st.key}|${st.mode || ""}|${st.a ?? ""}+${st.b ?? ""}`; // e.g. running|full|2+1
+          }
           listeners.forEach((fn) => fn(changes, "local"));
         },
       },
@@ -106,9 +109,9 @@
     const lines = () => [...document.querySelectorAll(".captionduet-overlay .cd-line")].map((e) => (e.style.display === "none" ? "" : e.textContent));
     const spoken = () => document.querySelector(".captionduet-overlay .cd-primary").firstChild.textContent;
 
-    const ready = await until(() => /^Çalışıyor/.test(store.cdStatus || ""));
+    const ready = await until(() => /^running/.test(store.cdStatus || ""));
     check("reaches the running state", ready, "status: " + store.cdStatus);
-    check("full mode through the page script", /\(tam mod\)/.test(store.cdStatus || ""), store.cdStatus);
+    check("full mode through the page script", /^running\|full\|/.test(store.cdStatus || ""), store.cdStatus);
     await until(() => lines().some(Boolean), 3000);
     check("draws both languages", JSON.stringify(lines()) === '["Hello there","Merhaba?"]', JSON.stringify(lines()));
     check("every subtitle request carried the token", fetched.slice(1).every((u) => u.includes("pot=POT")), fetched.join(" "));
@@ -116,7 +119,7 @@
     check("captions switched back off for a viewer who had them off", !captionsOn && moduleCalls.join() === "load,unload", moduleCalls.join());
     await until(() => store.cdStates.VID.tracks.length, 3000);
     const st = store.cdStates.VID;
-    check("state for the popup is stored under the video id", /^Çalışıyor/.test(st.status) && st.tracks.length === 1 && st.tracks[0].code === "en", JSON.stringify(st));
+    check("state for the popup is stored under the video id", st.status.key === "running" && st.tracks.length === 1 && st.tracks[0].code === "en", JSON.stringify(st));
     check("state lists the translation languages", st.translations.length === 2 && st.translations[1].name === "Türkçe", JSON.stringify(st.translations));
 
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -157,16 +160,16 @@
     check("pause stops the frames again", frames === before, `${frames - before} frames`);
 
     await chrome.storage.local.set({ secondary: "off" });
-    await until(() => /\+ 0 satır/.test(store.cdStatus || ""));
+    await until(() => /\+0$/.test(store.cdStatus || ""));
     await until(() => lines()[0] === "Hello there", 3000);
     check("secondary off: one line", JSON.stringify(lines()) === '["Hello there",""]', JSON.stringify(lines()) + " " + store.cdStatus);
 
     // Switching back to a language already downloaded must not hit the network.
     let requests = fetched.length;
     await chrome.storage.local.set({ secondary: "tr" });
-    await until(() => /önbellek/.test(store.cdStatus || ""), 3000);
+    await until(() => /\|cache\|/.test(store.cdStatus || ""), 3000);
     await until(() => lines()[1] === "Merhaba?", 3000);
-    check("cached language: instant, no requests", /önbellek/.test(store.cdStatus || "") && fetched.length === requests && lines()[1] === "Merhaba?", `${store.cdStatus} / ${fetched.length - requests} requests`);
+    check("cached language: instant, no requests", /\|cache\|/.test(store.cdStatus || "") && fetched.length === requests && lines()[1] === "Merhaba?", `${store.cdStatus} / ${fetched.length - requests} requests`);
 
     // In-page navigation is driven by YouTube's event, not by polling the URL.
     history.pushState(null, "", "/");
@@ -181,8 +184,8 @@
     check("coming back uses the cache", fetched.length === requests && JSON.stringify(lines()) === '["Hello there","Merhaba?"]', JSON.stringify(lines()));
 
     await chrome.storage.local.set({ enabled: false });
-    await until(() => !document.querySelector(".captionduet-overlay") && store.cdStatus === "Kapalı.", 3000);
-    check("disabled: overlay removed", !document.querySelector(".captionduet-overlay") && store.cdStatus === "Kapalı.", store.cdStatus);
+    await until(() => !document.querySelector(".captionduet-overlay") && /^off\|/.test(store.cdStatus || ""), 3000);
+    check("disabled: overlay removed", !document.querySelector(".captionduet-overlay") && /^off\|/.test(store.cdStatus || ""), store.cdStatus);
 
     out.push(failed ? `${failed} failed` : "all passed");
     globalThis.testResult = { failed, text: out.join("\n") };

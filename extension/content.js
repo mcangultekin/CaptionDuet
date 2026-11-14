@@ -34,7 +34,8 @@
   // ---------- state shown in the popup ----------
   // Written to storage under the video's id (the popup reads storage reliably
   // in every browser, and the id keeps tabs from overwriting each other).
-  const state = { status: "", tracks: [], translations: [] };
+  // status is data ({ key, mode, a, b, ... }); the popup words it in its own language.
+  const state = { status: null, tracks: [], translations: [] };
   const STATES_MAX = 6;
   let publishing = Promise.resolve();
   function publish() {
@@ -52,9 +53,9 @@
       })
       .catch(() => {});
   }
-  function setStatus(text) {
-    LOG(text);
-    state.status = text;
+  function setStatus(key, details = {}) {
+    state.status = { key, ...details };
+    LOG(key, details);
     publish();
   }
   function setLanguages(info) {
@@ -352,7 +353,7 @@
   async function load(videoId) {
     const token = ++loadToken;
     stop();
-    if (!settings.enabled) return setStatus("Kapalı.");
+    if (!settings.enabled) return setStatus("off");
     if (!videoId) return;
     setLanguages(null); // refilled below, once the player has told us its tracks
 
@@ -365,7 +366,7 @@
     if (pCached && sCached) {
       // Seen before (e.g. a language switched back): no network, no caption toggling.
       cues = { primary: pCached, secondary: sCached };
-      setStatus(`Çalışıyor (önbellek): ${pCached.length} + ${sCached.length} satır.`);
+      setStatus("running", { mode: "cache", a: pCached.length, b: sCached.length });
       start();
       // The popup's language list still wants this video's tracks.
       const cachedInfo = await getInfoFor(videoId);
@@ -375,18 +376,18 @@
       }
       return;
     }
-    setStatus("Video bulundu, altyazılar aranıyor…");
+    setStatus("searching");
 
     const info = await getInfoFor(videoId);
     if (token !== loadToken) return;
     setLanguages(info);
-    if (info && !info.tracks.length) return setStatus("Bu videoda altyazı yok.");
-    const mode = info ? "tam mod" : "yedek mod";
+    if (info && !info.tracks.length) return setStatus("noCaptions");
+    const mode = info ? "full" : "fallback";
 
     if (!capturedByVideo.has(videoId)) scanPerformance();
     if (!capturedByVideo.has(videoId)) {
       // Captions can't be switched on while an ad is playing.
-      if (playerEl() && playerEl().classList.contains("ad-showing")) setStatus("Reklamın bitmesi bekleniyor…");
+      if (playerEl() && playerEl().classList.contains("ad-showing")) setStatus("waitingAd");
       for (let i = 0; i < 600 && playerEl() && playerEl().classList.contains("ad-showing"); i++) {
         await sleep(500);
         if (token !== loadToken) return;
@@ -413,7 +414,7 @@
     }
     const captured = capturedByVideo.get(videoId) || null;
     if (!captured && !info) {
-      return setStatus(`Altyazı isteği yakalanamadı (${mode}). Videoda CC düğmesine bir kez basmayı dene.`);
+      return setStatus("captureFailed", { mode });
     }
 
     const pList = candidates(info, settings.primary, captured);
@@ -424,11 +425,11 @@
     if (wantSecondary) remember(sKey, sc);
     if (token !== loadToken) return;
     if (!pc.length && !sc.length) {
-      return setStatus(`Altyazı indirilemedi (${mode}, jeton: ${captured ? "var" : "yok"}).`);
+      return setStatus("downloadFailed", { mode, token: !!captured });
     }
     cues = { primary: pc, secondary: sc };
-    const missing = !pc.length ? " Üst dil bulunamadı." : sList.length && !sc.length ? " Alt dil bulunamadı." : "";
-    setStatus(`Çalışıyor (${mode}): ${pc.length} + ${sc.length} satır.${missing}`);
+    const missing = !pc.length ? "top" : sList.length && !sc.length ? "bottom" : "";
+    setStatus("running", { mode, a: pc.length, b: sc.length, missing });
     start();
   }
 

@@ -5,8 +5,6 @@ video's own language on top (for example English) and a language you choose belo
 (for example German). When the video has no track in that language, YouTube's own
 automatic translation is used.
 
-> The popup and its status messages are currently in Turkish.
-
 ## Install
 
 ### Temporary (no Xcode needed)
@@ -37,6 +35,9 @@ A temporary extension is removed when Safari quits; repeat steps 2–3 after reo
 
 - Click the CaptionDuet icon in the toolbar to switch it on or off and to set the top
   and bottom languages, text size, background opacity and the bottom line's colour.
+- The interface is in English by default. The menu next to the on/off switch changes it
+  to Spanish, Portuguese, French, German, Italian, Turkish, Russian, Japanese, Korean
+  or Simplified Chinese.
 - The language menus list the open video's own subtitle tracks first, then every
   language YouTube can auto-translate to. The status line belongs to the video in the
   current tab.
@@ -67,11 +68,12 @@ the video.
 | `content.js` | Drives the flow and draws the overlay |
 | `overlay.css` | Look of the subtitle overlay |
 | `popup.*` | Settings menu |
+| `i18n.js` | Interface texts in every supported language |
 
 The manifest loads `inject.js` straight into the page with `"world": "MAIN"` (confirmed
 in Safari). If the page script does not answer, the extension falls back to reading the
 player's request from the Performance API. The popup's status line shows which path is
-in use: `tam mod` (full mode) or `yedek mod` (fallback mode).
+in use: "full mode" or "fallback mode".
 
 ## Tests
 

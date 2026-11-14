@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="popup.css">
@@ -7,40 +7,42 @@
 <body>
   <header>
     <h1>CaptionDuet</h1>
-    <label class="switch" title="Aç / kapat">
+    <select id="uiLang" class="lang" data-i18n-title="uiLanguage" data-i18n-label="uiLanguage"></select>
+    <label class="switch" data-i18n-title="toggle">
       <input type="checkbox" id="enabled">
       <span></span>
     </label>
   </header>
 
   <label class="field">
-    <span>Üst altyazı</span>
+    <span data-i18n="top"></span>
     <select id="primary"></select>
   </label>
 
   <label class="field">
-    <span>Alt altyazı</span>
+    <span data-i18n="bottom"></span>
     <select id="secondary"></select>
   </label>
 
   <label class="field">
-    <span>Yazı boyutu <output id="fontScaleOut"></output></span>
+    <span><span data-i18n="size"></span> <output id="fontScaleOut"></output></span>
     <input type="range" id="fontScale" min="2.5" max="7" step="0.1">
   </label>
 
   <label class="field">
-    <span>Arka plan <output id="backgroundOut"></output></span>
+    <span><span data-i18n="background"></span> <output id="backgroundOut"></output></span>
     <input type="range" id="background" min="0" max="1" step="0.05">
   </label>
 
   <label class="field row">
-    <span>Alt satır rengi</span>
+    <span data-i18n="color"></span>
     <input type="color" id="secondaryColor">
   </label>
 
-  <p class="status" id="status">Durum: YouTube'da bir video aç.</p>
-  <p class="hint">Videoda dil yoksa YouTube'un otomatik çevirisi kullanılır.</p>
+  <p class="status" id="status"></p>
+  <p class="hint" data-i18n="hint"></p>
   <script src="core.js"></script>
+  <script src="i18n.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

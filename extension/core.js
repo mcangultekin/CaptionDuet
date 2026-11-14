@@ -4,7 +4,8 @@
   const DEFAULTS = {
     enabled: true,
     primary: "auto", // "auto" = the video's own language
-    secondary: "tr",
+    secondary: ((globalThis.navigator && globalThis.navigator.language) || "en").split("-")[0], // the viewer's language
+    uiLang: "en", // interface language of the popup
     fontScale: 4.2, // % of player height
     secondaryColor: "#ffd75e",
     background: 0.55,
