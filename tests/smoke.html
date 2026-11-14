@@ -164,6 +164,21 @@
     await until(() => lines()[0] === "Hello there", 3000);
     check("secondary off: one line", JSON.stringify(lines()) === '["Hello there",""]', JSON.stringify(lines()) + " " + store.cdStatus);
 
+    // Safari may not deliver storage change events to the page; a setting written
+    // without any event must still be picked up, with no reload.
+    const fontVar = () => document.querySelector(".captionduet-overlay").style.getPropertyValue("--cd-font");
+    const fontBefore = fontVar();
+    store.fontScale = 7; // silent write: no change event
+    await until(() => fontVar() !== fontBefore, 4000);
+    check("a silent settings change still applies (text size)", fontVar() !== fontBefore, `${fontBefore} -> ${fontVar()}`);
+    store.enabled = false;
+    await until(() => !document.querySelector(".captionduet-overlay"), 4000);
+    check("a silent settings change still applies (switch off)", !document.querySelector(".captionduet-overlay"));
+    store.enabled = true;
+    await until(() => lines()[0] === "Hello there", 4000);
+    check("a silent settings change still applies (switch on)", lines()[0] === "Hello there", JSON.stringify(lines()));
+    await wait(500);
+
     // Switching back to a language already downloaded must not hit the network.
     let requests = fetched.length;
     await chrome.storage.local.set({ secondary: "tr" });

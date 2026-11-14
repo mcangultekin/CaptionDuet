@@ -462,17 +462,42 @@
     checkNavigation();
   }
 
-  api.storage.onChanged.addListener((changes, area) => {
-    if (area !== "local") return;
-    if (!SETTING_KEYS.some((k) => k in changes)) return;
-    const old = { ...settings };
-    for (const k of SETTING_KEYS) if (k in changes) settings[k] = changes[k].newValue ?? DEFAULTS[k];
-    const needsReload =
-      old.enabled !== settings.enabled || old.primary !== settings.primary || old.secondary !== settings.secondary;
+  // ---------- settings changed in the popup ----------
+  function applySettings(next) {
+    const old = settings;
+    if (SETTING_KEYS.every((k) => old[k] === next[k])) return;
+    settings = next;
+    const needsReload = old.enabled !== next.enabled || old.primary !== next.primary || old.secondary !== next.secondary;
     if (needsReload) {
       if (currentVideo) load(currentVideo);
     } else {
       applyStyle();
     }
-  });
+  }
+
+  // The direct route: the browser tells us what changed.
+  try {
+    api.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local" || !SETTING_KEYS.some((k) => k in changes)) return;
+      const next = { ...settings };
+      for (const k of SETTING_KEYS) if (k in changes) next[k] = changes[k].newValue ?? DEFAULTS[k];
+      applySettings(next);
+    });
+  } catch (e) {
+    LOG("storage.onChanged unavailable", e);
+  }
+
+  // The dependable route: Safari does not always deliver that event to pages,
+  // so also re-read the settings. Often while the popup may be open (the page
+  // is visible but has lost focus to it), rarely otherwise, never when hidden.
+  function rereadSettings() {
+    if (!document.hidden) {
+      Promise.resolve(api.storage.local.get(DEFAULTS)).then(
+        (stored) => applySettings({ ...DEFAULTS, ...(stored || {}) }),
+        () => {}
+      );
+    }
+    setTimeout(rereadSettings, document.hasFocus() ? 2000 : 400);
+  }
+  setTimeout(rereadSettings, 1000);
 })();

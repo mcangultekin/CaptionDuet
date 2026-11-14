@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CaptionDuet",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Shows two subtitle tracks at once on YouTube videos, for example English and German.",
   "permissions": [
     "storage"
