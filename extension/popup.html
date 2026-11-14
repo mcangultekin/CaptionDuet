@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>DualSubs</h1>
+    <label class="switch" title="Aç / kapat">
+      <input type="checkbox" id="enabled">
+      <span></span>
+    </label>
+  </header>
+
+  <label class="field">
+    <span>Üst altyazı</span>
+    <select id="primary"></select>
+  </label>
+
+  <label class="field">
+    <span>Alt altyazı</span>
+    <select id="secondary"></select>
+  </label>
+
+  <label class="field">
+    <span>Yazı boyutu <output id="fontScaleOut"></output></span>
+    <input type="range" id="fontScale" min="2.5" max="7" step="0.1">
+  </label>
+
+  <label class="field">
+    <span>Arka plan <output id="backgroundOut"></output></span>
+    <input type="range" id="background" min="0" max="1" step="0.05">
+  </label>
+
+  <label class="field row">
+    <span>Alt satır rengi</span>
+    <input type="color" id="secondaryColor">
+  </label>
+
+  <p class="status" id="status">Durum: YouTube'da bir video aç.</p>
+  <p class="hint">Videoda dil yoksa YouTube'un otomatik çevirisi kullanılır.</p>
+  <script src="popup.js"></script>
+</body>
+</html>

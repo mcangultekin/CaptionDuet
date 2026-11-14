@@ -1,0 +1,49 @@
+/* Hide YouTube's own captions while DualSubs is showing its pair. */
+.dualsubs-active .ytp-caption-window-container {
+  display: none !important;
+}
+
+.dualsubs-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 5%;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25em;
+  pointer-events: none;
+  text-align: center;
+  font-family: "YouTube Noto", Roboto, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--ds-font, 22px);
+  line-height: 1.3;
+  transition: bottom 0.15s ease;
+}
+
+/* Nothing to show during ads. */
+#movie_player.ad-showing .dualsubs-overlay {
+  display: none;
+}
+
+/* Lift above the control bar when it is visible. */
+#movie_player:not(.ytp-autohide) .dualsubs-overlay {
+  bottom: calc(60px + 2%);
+}
+
+.dualsubs-overlay .ds-line {
+  max-width: 88%;
+  padding: 0.08em 0.4em;
+  border-radius: 0.2em;
+  background: var(--ds-bg, rgba(8, 8, 8, 0.55));
+  color: #fff;
+  white-space: pre-line;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.dualsubs-overlay .ds-secondary {
+  color: var(--ds-color2, #ffd75e);
+  font-size: 0.88em;
+}
