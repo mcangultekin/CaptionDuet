@@ -2,7 +2,7 @@
 // browser: serve the repo root and open tests/ (see README).
 // The fixtures are hand-written in YouTube's json3 shape, not recorded responses.
 (async () => {
-const C = globalThis.DualSubsCore;
+const C = globalThis.CaptionDuetCore;
 const out = [];
 let failed = 0;
 let count = 0;

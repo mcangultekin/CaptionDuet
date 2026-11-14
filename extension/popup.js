@@ -1,6 +1,6 @@
 const api = globalThis.browser || globalThis.chrome;
 
-const { DEFAULTS } = globalThis.DualSubsCore;
+const { DEFAULTS } = globalThis.CaptionDuetCore;
 
 const LANGS = [
   ["en", "İngilizce"],
@@ -122,7 +122,7 @@ function showState(st) {
 
 // The content script keeps one entry per video in storage. Show the one for
 // the video in this tab; if the tab's address can't be read, the newest one.
-const { videoIdFromUrl } = globalThis.DualSubsCore;
+const { videoIdFromUrl } = globalThis.CaptionDuetCore;
 let tabVideo; // undefined = unknown, null = this tab has no video
 
 function pick(states) {
@@ -142,10 +142,10 @@ function pick(states) {
   } catch (_) {
     // No access to the tab's address: fall back to the newest entry.
   }
-  const got = await api.storage.local.get({ dsStates: {} });
-  showState(pick(got.dsStates));
+  const got = await api.storage.local.get({ cdStates: {} });
+  showState(pick(got.cdStates));
 })();
 
 api.storage.onChanged.addListener((c, area) => {
-  if (area === "local" && c.dsStates) showState(pick(c.dsStates.newValue));
+  if (area === "local" && c.cdStates) showState(pick(c.cdStates.newValue));
 });

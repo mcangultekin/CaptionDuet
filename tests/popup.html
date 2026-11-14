@@ -22,7 +22,7 @@
 
       const saved = [];
       let changed = null;
-      const push = (states) => changed({ dsStates: { newValue: states } }, "local");
+      const push = (states) => changed({ cdStates: { newValue: states } }, "local");
       const tabState = {
         status: "Çalışıyor (tam mod, manifest): 10 + 10 satır.",
         tracks: [
@@ -36,7 +36,7 @@
       };
       const other = { status: "Başka sekme", tracks: [], translations: [], at: 99 };
       // A saved language the video does not list, and a newer entry from another tab.
-      const store = { secondary: "xx", dsStates: { MINE: { ...tabState, at: 1 }, OTHER: other } };
+      const store = { secondary: "xx", cdStates: { MINE: { ...tabState, at: 1 }, OTHER: other } };
       window.chrome = {
         storage: {
           local: {

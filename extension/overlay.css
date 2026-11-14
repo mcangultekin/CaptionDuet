@@ -1,9 +1,9 @@
-/* Hide YouTube's own captions while DualSubs is showing its pair. */
-.dualsubs-active .ytp-caption-window-container {
+/* Hide YouTube's own captions while CaptionDuet is showing its pair. */
+.captionduet-active .ytp-caption-window-container {
   display: none !important;
 }
 
-.dualsubs-overlay {
+.captionduet-overlay {
   position: absolute;
   left: 0;
   right: 0;
@@ -15,39 +15,39 @@
   pointer-events: none;
   text-align: center;
   font-family: "YouTube Noto", Roboto, -apple-system, "Helvetica Neue", Arial, sans-serif;
-  font-size: var(--ds-font, 22px);
+  font-size: var(--cd-font, 22px);
   line-height: 1.3;
   transition: bottom 0.15s ease;
 }
 
 /* Nothing to show during ads. */
-.html5-video-player.ad-showing .dualsubs-overlay {
+.html5-video-player.ad-showing .captionduet-overlay {
   display: none;
 }
 
 /* Lift above the control bar when it is visible. */
-#movie_player:not(.ytp-autohide) .dualsubs-overlay {
+#movie_player:not(.ytp-autohide) .captionduet-overlay {
   bottom: calc(60px + 2%);
 }
 
 /* Shorts: stay clear of the title and channel shown over the bottom of the video. */
-#shorts-player .dualsubs-overlay {
+#shorts-player .captionduet-overlay {
   bottom: 24%;
 }
 
 /* One box holding both languages; its width follows the longer line. */
-.dualsubs-overlay .ds-box {
+.captionduet-overlay .cd-box {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   max-width: 88%;
   padding: 0.12em 0.55em;
   border-radius: 0.25em;
-  background: var(--ds-bg, rgba(8, 8, 8, 0.55));
+  background: var(--cd-bg, rgba(8, 8, 8, 0.55));
 }
 
 /* Both languages share the same size; the shorter line is centered. */
-.dualsubs-overlay .ds-line {
+.captionduet-overlay .cd-line {
   color: #fff;
   text-align: center;
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
@@ -56,16 +56,16 @@
 }
 
 /* Words not spoken yet: invisible, but still taking their space. */
-.dualsubs-overlay .ds-rest {
+.captionduet-overlay .cd-rest {
   visibility: hidden;
 }
 
-.dualsubs-overlay .ds-secondary {
-  color: var(--ds-color2, #ffd75e);
+.captionduet-overlay .cd-secondary {
+  color: var(--cd-color2, #ffd75e);
 }
 
 /* Thin divider when both languages are shown. */
-.dualsubs-overlay .ds-both .ds-secondary {
+.captionduet-overlay .cd-both .cd-secondary {
   margin-top: 0.18em;
   padding-top: 0.18em;
   border-top: 1px solid rgba(255, 255, 255, 0.18);

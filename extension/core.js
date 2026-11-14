@@ -199,7 +199,7 @@
 
   const activeText = (list, ms) => activeCue(list, ms).text;
 
-  globalThis.DualSubsCore = {
+  globalThis.CaptionDuetCore = {
     DEFAULTS,
     isYouTube,
     timedtextUrl,

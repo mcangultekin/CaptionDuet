@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "DualSubs for YouTube",
-  "version": "1.3.0",
+  "name": "CaptionDuet",
+  "version": "1.4.0",
   "description": "YouTube videolarında iki altyazıyı (ör. İngilizce + Almanca) aynı anda gösterir.",
   "permissions": [
     "storage"
@@ -11,7 +11,7 @@
     "https://m.youtube.com/*"
   ],
   "action": {
-    "default_title": "DualSubs",
+    "default_title": "CaptionDuet",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

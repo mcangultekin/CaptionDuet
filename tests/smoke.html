@@ -41,7 +41,7 @@
           for (const k in patch) changes[k] = { oldValue: store[k], newValue: patch[k] };
           Object.assign(store, patch);
           // What the popup reads for this video.
-          if (patch.dsStates && patch.dsStates.VID) store.dsStatus = patch.dsStates.VID.status;
+          if (patch.cdStates && patch.cdStates.VID) store.cdStatus = patch.cdStates.VID.status;
           listeners.forEach((fn) => fn(changes, "local"));
         },
       },
@@ -103,19 +103,19 @@
       }
       return false;
     };
-    const lines = () => [...document.querySelectorAll(".dualsubs-overlay .ds-line")].map((e) => (e.style.display === "none" ? "" : e.textContent));
-    const spoken = () => document.querySelector(".dualsubs-overlay .ds-primary").firstChild.textContent;
+    const lines = () => [...document.querySelectorAll(".captionduet-overlay .cd-line")].map((e) => (e.style.display === "none" ? "" : e.textContent));
+    const spoken = () => document.querySelector(".captionduet-overlay .cd-primary").firstChild.textContent;
 
-    const ready = await until(() => /^Çalışıyor/.test(store.dsStatus || ""));
-    check("reaches the running state", ready, "status: " + store.dsStatus);
-    check("full mode through the page script", /\(tam mod\)/.test(store.dsStatus || ""), store.dsStatus);
+    const ready = await until(() => /^Çalışıyor/.test(store.cdStatus || ""));
+    check("reaches the running state", ready, "status: " + store.cdStatus);
+    check("full mode through the page script", /\(tam mod\)/.test(store.cdStatus || ""), store.cdStatus);
     await until(() => lines().some(Boolean), 3000);
     check("draws both languages", JSON.stringify(lines()) === '["Hello there","Merhaba?"]', JSON.stringify(lines()));
     check("every subtitle request carried the token", fetched.slice(1).every((u) => u.includes("pot=POT")), fetched.join(" "));
-    check("page is marked active", document.documentElement.classList.contains("dualsubs-active"));
+    check("page is marked active", document.documentElement.classList.contains("captionduet-active"));
     check("captions switched back off for a viewer who had them off", !captionsOn && moduleCalls.join() === "load,unload", moduleCalls.join());
-    await until(() => store.dsStates.VID.tracks.length, 3000);
-    const st = store.dsStates.VID;
+    await until(() => store.cdStates.VID.tracks.length, 3000);
+    const st = store.cdStates.VID;
     check("state for the popup is stored under the video id", /^Çalışıyor/.test(st.status) && st.tracks.length === 1 && st.tracks[0].code === "en", JSON.stringify(st));
     check("state lists the translation languages", st.translations.length === 2 && st.translations[1].name === "Türkçe", JSON.stringify(st.translations));
 
@@ -146,7 +146,7 @@
     now = 21.5;
     await until(() => spoken() === "one two", 3000);
     check("word timing: next word appears", spoken() === "one two", spoken());
-    check("unspoken words are hidden but keep their space", getComputedStyle(document.querySelector(".ds-primary .ds-rest")).visibility === "hidden");
+    check("unspoken words are hidden but keep their space", getComputedStyle(document.querySelector(".cd-primary .cd-rest")).visibility === "hidden");
     now = 1;
     await until(() => lines()[0] === "Hello there", 3000);
     paused = true;
@@ -157,32 +157,32 @@
     check("pause stops the frames again", frames === before, `${frames - before} frames`);
 
     await chrome.storage.local.set({ secondary: "off" });
-    await until(() => /\+ 0 satır/.test(store.dsStatus || ""));
+    await until(() => /\+ 0 satır/.test(store.cdStatus || ""));
     await until(() => lines()[0] === "Hello there", 3000);
-    check("secondary off: one line", JSON.stringify(lines()) === '["Hello there",""]', JSON.stringify(lines()) + " " + store.dsStatus);
+    check("secondary off: one line", JSON.stringify(lines()) === '["Hello there",""]', JSON.stringify(lines()) + " " + store.cdStatus);
 
     // Switching back to a language already downloaded must not hit the network.
     let requests = fetched.length;
     await chrome.storage.local.set({ secondary: "tr" });
-    await until(() => /önbellek/.test(store.dsStatus || ""), 3000);
+    await until(() => /önbellek/.test(store.cdStatus || ""), 3000);
     await until(() => lines()[1] === "Merhaba?", 3000);
-    check("cached language: instant, no requests", /önbellek/.test(store.dsStatus || "") && fetched.length === requests && lines()[1] === "Merhaba?", `${store.dsStatus} / ${fetched.length - requests} requests`);
+    check("cached language: instant, no requests", /önbellek/.test(store.cdStatus || "") && fetched.length === requests && lines()[1] === "Merhaba?", `${store.cdStatus} / ${fetched.length - requests} requests`);
 
     // In-page navigation is driven by YouTube's event, not by polling the URL.
     history.pushState(null, "", "/");
     await wait(1500);
-    check("navigation is not polled", !!document.querySelector(".dualsubs-overlay"));
+    check("navigation is not polled", !!document.querySelector(".captionduet-overlay"));
     document.dispatchEvent(new Event("yt-navigate-finish"));
-    await until(() => !document.querySelector(".dualsubs-overlay"), 3000);
-    check("leaving the video removes the overlay", !document.querySelector(".dualsubs-overlay"));
+    await until(() => !document.querySelector(".captionduet-overlay"), 3000);
+    check("leaving the video removes the overlay", !document.querySelector(".captionduet-overlay"));
     history.pushState(null, "", "/watch?v=VID");
     document.dispatchEvent(new Event("yt-navigate-finish"));
     await until(() => lines().some(Boolean), 3000);
     check("coming back uses the cache", fetched.length === requests && JSON.stringify(lines()) === '["Hello there","Merhaba?"]', JSON.stringify(lines()));
 
     await chrome.storage.local.set({ enabled: false });
-    await until(() => !document.querySelector(".dualsubs-overlay") && store.dsStatus === "Kapalı.", 3000);
-    check("disabled: overlay removed", !document.querySelector(".dualsubs-overlay") && store.dsStatus === "Kapalı.", store.dsStatus);
+    await until(() => !document.querySelector(".captionduet-overlay") && store.cdStatus === "Kapalı.", 3000);
+    check("disabled: overlay removed", !document.querySelector(".captionduet-overlay") && store.cdStatus === "Kapalı.", store.cdStatus);
 
     out.push(failed ? `${failed} failed` : "all passed");
     globalThis.testResult = { failed, text: out.join("\n") };

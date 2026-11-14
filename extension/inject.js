@@ -10,10 +10,10 @@
   // out there, and content.js carries on in fallback mode.
   const ext = globalThis.browser || globalThis.chrome;
   if (ext && ext.runtime && ext.runtime.id) return;
-  if (window.__dualSubsInjected) return;
-  window.__dualSubsInjected = true;
+  if (window.__captionDuetInjected) return;
+  window.__captionDuetInjected = true;
 
-  const TAG = "DUALSUBS";
+  const TAG = "CAPTIONDUET";
   const origFetch = window.fetch.bind(window);
 
   function report(url) {

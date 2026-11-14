@@ -1,4 +1,4 @@
-# DualSubs — YouTube için çift altyazı (Safari)
+# CaptionDuet — YouTube için çift altyazı (Safari)
 
 YouTube videolarında iki altyazıyı aynı anda gösterir: üstte videonun kendi dili
 (ör. İngilizce), altta seçtiğin dil (ör. Almanca). Videoda o dil yoksa YouTube'un
@@ -8,7 +8,7 @@ kendi otomatik çevirisi kullanılır.
 
 1. Safari > Ayarlar > Gelişmiş > **"Web geliştiricileri için özellikleri göster"** kutusunu işaretle.
 2. Safari > Ayarlar > **Geliştirici** sekmesi > **"Geçici Uzantı Ekle…"** (Add Temporary Extension…).
-3. `extension` klasörünü seç. Uzantılar sekmesinde DualSubs'ı aç ve youtube.com için izin ver.
+3. `extension` klasörünü seç. Uzantılar sekmesinde CaptionDuet'ı aç ve youtube.com için izin ver.
 
 Not: Geçici uzantı Safari kapanınca kaldırılır; yeniden açınca 2–3. adımı tekrarla.
 
@@ -17,12 +17,12 @@ Not: Geçici uzantı Safari kapanınca kaldırılır; yeniden açınca 2–3. ad
 1. App Store'dan Xcode'u kur ve bir kez aç.
 2. `sudo xcode-select -s /Applications/Xcode.app` ile etkin geliştirici dizinini Xcode yap.
 3. `xcrun safari-web-extension-converter extension/ --project-location xcode --macos-only`
-4. Açılan projeyi Xcode'da çalıştır (⌘R), sonra Safari > Ayarlar > Uzantılar'dan DualSubs'ı aç.
+4. Açılan projeyi Xcode'da çalıştır (⌘R), sonra Safari > Ayarlar > Uzantılar'dan CaptionDuet'ı aç.
    İmzasız yapı için Safari > Geliştirici > "İmzasız Uzantılara İzin Ver" gerekir.
 
 ## Kullanım
 
-- Araç çubuğundaki DualSubs simgesinden: aç/kapat, üst ve alt dil, yazı boyutu,
+- Araç çubuğundaki CaptionDuet simgesinden: aç/kapat, üst ve alt dil, yazı boyutu,
   arka plan saydamlığı, alt satır rengi.
 - Dil menüsünde önce açık videonun kendi altyazıları, sonra YouTube'un otomatik
   çevirebildiği diller listelenir. Durum satırı o sekmedeki videoya aittir.
@@ -73,3 +73,9 @@ python3 -m http.server 8765 --bind 127.0.0.1
 Sekme başlığı `PASS` ya da `FAIL` olur. Örnek altyazı dosyaları YouTube'un `json3`
 biçiminde elle yazılmıştır, kayıtlı gerçek yanıtlar değildir; testler YouTube'un
 davranışının değişip değişmediğini söyleyemez.
+
+## Yasal not
+
+CaptionDuet bağımsız bir projedir; YouTube veya Google ile bir bağlantısı, ortaklığı ya da
+onayı yoktur. YouTube, Google LLC'nin ticari markasıdır ve burada yalnızca eklentinin hangi
+sitede çalıştığını belirtmek için anılır.

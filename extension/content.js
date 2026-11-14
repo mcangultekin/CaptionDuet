@@ -7,14 +7,14 @@
 //  - Fallback (if the page script doesn't answer): the player's own subtitle
 //    request is read from the Performance API, captions are switched on by
 //    clicking the CC button, and files are fetched here.
-// Pure logic lives in core.js (DualSubsCore).
+// Pure logic lives in core.js (CaptionDuetCore).
 (() => {
   const api = globalThis.browser || globalThis.chrome;
-  const TAG = "DUALSUBS";
-  const LOG = (...a) => console.log("[DualSubs]", ...a);
+  const TAG = "CAPTIONDUET";
+  const LOG = (...a) => console.log("[CaptionDuet]", ...a);
 
   const { DEFAULTS, timedtextUrl, videoIdFromUrl, playerSelector, pickOriginal, candidates, langOfUrl, parseJson3, activeCue } =
-    globalThis.DualSubsCore;
+    globalThis.CaptionDuetCore;
   const SETTING_KEYS = Object.keys(DEFAULTS);
 
   let settings = { ...DEFAULTS };
@@ -43,12 +43,12 @@
     const entry = { ...state, at: Date.now() };
     // One write at a time, so a quick pair of updates can't land out of order.
     publishing = publishing
-      .then(() => api.storage.local.get({ dsStates: {} }))
+      .then(() => api.storage.local.get({ cdStates: {} }))
       .then((got) => {
-        const all = { ...((got && got.dsStates) || {}), [videoId]: entry };
+        const all = { ...((got && got.cdStates) || {}), [videoId]: entry };
         const ids = Object.keys(all).sort((a, b) => all[b].at - all[a].at);
         for (const id of ids.slice(STATES_MAX)) delete all[id];
-        return api.storage.local.set({ dsStates: all });
+        return api.storage.local.set({ cdStates: all });
       })
       .catch(() => {});
   }
@@ -225,20 +225,20 @@
     if (!p) return null;
     if (overlay && overlay.isConnected && overlay.parentElement === p) return overlay;
     overlay = document.createElement("div");
-    overlay.className = "dualsubs-overlay";
+    overlay.className = "captionduet-overlay";
     // One shared box for both languages. No innerHTML: YouTube enforces Trusted Types.
     const box = document.createElement("div");
-    box.className = "ds-box";
+    box.className = "cd-box";
     box.style.display = "none";
-    for (const cls of ["ds-primary", "ds-secondary"]) {
+    for (const cls of ["cd-primary", "cd-secondary"]) {
       const line = document.createElement("div");
-      line.className = "ds-line " + cls;
+      line.className = "cd-line " + cls;
       line.style.display = "none";
       // Spoken part, then the part still to come (invisible, but it keeps its
       // place so the box doesn't jump as words appear).
       line.appendChild(document.createElement("span"));
       const rest = document.createElement("span");
-      rest.className = "ds-rest";
+      rest.className = "cd-rest";
       line.appendChild(rest);
       box.appendChild(line);
     }
@@ -255,9 +255,9 @@
     // The short side, so a tall Shorts player doesn't get oversized text.
     const h = p ? Math.min(p.clientHeight, p.clientWidth) || p.clientHeight : 480;
     const px = Math.max(12, Math.round((h * settings.fontScale) / 100));
-    overlay.style.setProperty("--ds-font", px + "px");
-    overlay.style.setProperty("--ds-color2", settings.secondaryColor);
-    overlay.style.setProperty("--ds-bg", `rgba(8,8,8,${settings.background})`);
+    overlay.style.setProperty("--cd-font", px + "px");
+    overlay.style.setProperty("--cd-color2", settings.secondaryColor);
+    overlay.style.setProperty("--cd-bg", `rgba(8,8,8,${settings.background})`);
   }
 
   const ro = typeof ResizeObserver === "function" ? new ResizeObserver(() => applyStyle()) : null;
@@ -289,7 +289,7 @@
     setLine(box.children[0], a);
     setLine(box.children[1], b);
     box.style.display = a.text || b.text ? "" : "none";
-    box.classList.toggle("ds-both", !!(a.text && b.text));
+    box.classList.toggle("cd-both", !!(a.text && b.text));
     lastDrawn = drawn;
   }
 
@@ -317,7 +317,7 @@
   }
 
   function start() {
-    document.documentElement.classList.add("dualsubs-active");
+    document.documentElement.classList.add("captionduet-active");
     lastDrawn = null;
     video = findVideo();
     if (!active) {
@@ -328,7 +328,7 @@
   }
 
   function stop() {
-    document.documentElement.classList.remove("dualsubs-active");
+    document.documentElement.classList.remove("captionduet-active");
     if (active) {
       active = false;
       for (const type of MEDIA_EVENTS) document.removeEventListener(type, onMedia, true);
