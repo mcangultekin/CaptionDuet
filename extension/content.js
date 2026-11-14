@@ -248,7 +248,16 @@
     const out = [];
     for (const e of data.events || []) {
       if (!e.segs) continue;
-      const t = e.segs.map((s) => s.utf8 || "").join("").replace(/​/g, "").trim();
+      // Drop YouTube's hard line breaks and let the browser wrap the text.
+      const t = e.segs
+        .map((s) => s.utf8 || "")
+        .join("")
+        .replace(/​/g, "")
+        .replace(/\s+/g, " ")
+        // Auto-translations often put a space before punctuation ("olabilir ?").
+        .replace(/ +([?!.,;:…)\]»”])/g, "$1")
+        .replace(/([(\[«“¿¡]) +/g, "$1")
+        .trim();
       if (!t) continue;
       const start = e.tStartMs || 0;
       out.push({ start, end: start + (e.dDurationMs || 2000), text: t });
@@ -323,13 +332,17 @@
     if (overlay && overlay.isConnected && overlay.parentElement === p) return overlay;
     overlay = document.createElement("div");
     overlay.className = "dualsubs-overlay";
-    // No innerHTML: YouTube enforces Trusted Types.
+    // One shared box for both languages. No innerHTML: YouTube enforces Trusted Types.
+    const box = document.createElement("div");
+    box.className = "ds-box";
+    box.style.display = "none";
     for (const cls of ["ds-primary", "ds-secondary"]) {
       const line = document.createElement("div");
       line.className = "ds-line " + cls;
       line.style.display = "none";
-      overlay.appendChild(line);
+      box.appendChild(line);
     }
+    overlay.appendChild(box);
     p.appendChild(overlay);
     applyStyle();
     return overlay;
@@ -367,8 +380,12 @@
     const ms = video.currentTime * 1000;
     const a = activeText(cues.primary, ms);
     const b = activeText(cues.secondary, ms);
-    if (a !== lastText[0]) setLine(ov.children[0], a);
-    if (b !== lastText[1]) setLine(ov.children[1], b);
+    if (a === lastText[0] && b === lastText[1]) return;
+    const box = ov.firstChild;
+    setLine(box.children[0], a);
+    setLine(box.children[1], b);
+    box.style.display = a || b ? "" : "none";
+    box.classList.toggle("ds-both", !!(a && b));
     lastText = [a, b];
   }
 

@@ -12,7 +12,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25em;
   pointer-events: none;
   text-align: center;
   font-family: "YouTube Noto", Roboto, -apple-system, "Helvetica Neue", Arial, sans-serif;
@@ -31,19 +30,33 @@
   bottom: calc(60px + 2%);
 }
 
-.dualsubs-overlay .ds-line {
+/* One box holding both languages; its width follows the longer line. */
+.dualsubs-overlay .ds-box {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   max-width: 88%;
-  padding: 0.08em 0.4em;
-  border-radius: 0.2em;
+  padding: 0.12em 0.55em;
+  border-radius: 0.25em;
   background: var(--ds-bg, rgba(8, 8, 8, 0.55));
+}
+
+/* Both languages share the same size; the shorter line is centered. */
+.dualsubs-overlay .ds-line {
   color: #fff;
-  white-space: pre-line;
+  text-align: center;
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+  /* Even line lengths, so a lone word or "?" isn't left on its own line. */
+  text-wrap: balance;
 }
 
 .dualsubs-overlay .ds-secondary {
   color: var(--ds-color2, #ffd75e);
-  font-size: 0.88em;
+}
+
+/* Thin divider when both languages are shown. */
+.dualsubs-overlay .ds-both .ds-secondary {
+  margin-top: 0.18em;
+  padding-top: 0.18em;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
