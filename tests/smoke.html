@@ -1,0 +1,192 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>running…</title>
+<!-- Wiring test: runs the real inject.js + core.js + content.js against a fake
+     YouTube player and fake subtitle responses. It checks that the pieces talk
+     to each other; it cannot tell whether real YouTube still behaves this way. -->
+<div id="movie_player" style="position:relative;width:640px;height:360px;background:#222">
+  <video></video>
+  <button class="ytp-subtitles-button" aria-pressed="false"></button>
+</div>
+<link rel="stylesheet" href="../extension/overlay.css">
+<pre id="out">running…</pre>
+<script>
+  history.replaceState(null, "", "/watch?v=VID");
+  const TT = "https://www.youtube.com/api/timedtext";
+  const cue = (t, text) => ({ tStartMs: t, dDurationMs: 5000, segs: [{ utf8: text }] });
+  const BODY = {
+    en: { events: [cue(0, "Hello there"), { tStartMs: 20000, dDurationMs: 5000, segs: [{ utf8: "one" }, { utf8: " two", tOffsetMs: 1000 }, { utf8: " three", tOffsetMs: 2000 }] }] },
+    tr: { events: [cue(0, "Merhaba ?")] },
+  };
+  const fetched = [];
+  // Stands in for the network; installed before inject.js so it becomes its "original" fetch.
+  window.fetch = async (input) => {
+    const u = new URL(typeof input === "string" ? input : input.url, location.href);
+    fetched.push(u.href);
+    const p = u.searchParams;
+    // Like YouTube: an empty 200 when the token is missing.
+    const body = p.get("pot") ? BODY[p.get("tlang") || p.get("lang")] : null;
+    return new Response(body ? JSON.stringify(body) : "", { status: 200 });
+  };
+  const store = {};
+  const listeners = [];
+  // Extension API stand-in (no runtime.id, so inject.js treats this as the page world).
+  window.chrome = {
+    runtime: { getURL: (p) => "../extension/" + p },
+    storage: {
+      local: {
+        get: async (d) => ({ ...d, ...store }),
+        set: async (patch) => {
+          const changes = {};
+          for (const k in patch) changes[k] = { oldValue: store[k], newValue: patch[k] };
+          Object.assign(store, patch);
+          // What the popup reads for this video.
+          if (patch.dsStates && patch.dsStates.VID) store.dsStatus = patch.dsStates.VID.status;
+          listeners.forEach((fn) => fn(changes, "local"));
+        },
+      },
+      onChanged: { addListener: (fn) => listeners.push(fn) },
+    },
+  };
+  const player = document.getElementById("movie_player");
+  const videoEl = player.querySelector("video");
+  let now = 1;
+  let paused = true;
+  Object.defineProperty(videoEl, "currentTime", { get: () => now });
+  Object.defineProperty(videoEl, "paused", { get: () => paused });
+  const media = (type) => videoEl.dispatchEvent(new Event(type));
+  let frames = 0;
+  const realRaf = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = (fn) => realRaf((t) => (frames++, fn(t)));
+  player.getPlayerResponse = () => ({
+    videoDetails: { videoId: "VID" },
+    captions: {
+      playerCaptionsTracklistRenderer: {
+        captionTracks: [{ baseUrl: TT + "?v=VID&lang=en&signature=SIG", languageCode: "en", isTranslatable: true, name: { simpleText: "English" } }],
+        translationLanguages: [
+          { languageCode: "de", languageName: { simpleText: "Almanca" } },
+          { languageCode: "tr", languageName: { simpleText: "Türkçe" } },
+        ],
+      },
+    },
+  });
+  // Turning captions on makes the player request its own subtitle file, token included.
+  let captionsOn = false; // the viewer has captions off
+  const moduleCalls = [];
+  player.isSubtitlesOn = () => captionsOn;
+  player.loadModule = () => {
+    captionsOn = true;
+    moduleCalls.push("load");
+    return window.fetch(TT + "?v=VID&lang=en&fmt=srv3&pot=POT&signature=SIG");
+  };
+  player.unloadModule = () => {
+    captionsOn = false;
+    moduleCalls.push("unload");
+  };
+  player.setOption = () => {};
+</script>
+<script src="../extension/inject.js"></script>
+<script src="../extension/core.js"></script>
+<script src="../extension/content.js"></script>
+<script>
+  (async () => {
+    const out = [];
+    let failed = 0;
+    const check = (name, ok, detail = "") => {
+      if (!ok) failed++;
+      out.push(`${ok ? "ok  " : "FAIL"} ${name}${ok ? "" : "  " + detail}`);
+    };
+    const until = async (fn, ms = 15000) => {
+      for (const end = Date.now() + ms; Date.now() < end; ) {
+        if (fn()) return true;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return false;
+    };
+    const lines = () => [...document.querySelectorAll(".dualsubs-overlay .ds-line")].map((e) => (e.style.display === "none" ? "" : e.textContent));
+    const spoken = () => document.querySelector(".dualsubs-overlay .ds-primary").firstChild.textContent;
+
+    const ready = await until(() => /^Çalışıyor/.test(store.dsStatus || ""));
+    check("reaches the running state", ready, "status: " + store.dsStatus);
+    check("full mode through the page script", /\(tam mod\)/.test(store.dsStatus || ""), store.dsStatus);
+    await until(() => lines().some(Boolean), 3000);
+    check("draws both languages", JSON.stringify(lines()) === '["Hello there","Merhaba?"]', JSON.stringify(lines()));
+    check("every subtitle request carried the token", fetched.slice(1).every((u) => u.includes("pot=POT")), fetched.join(" "));
+    check("page is marked active", document.documentElement.classList.contains("dualsubs-active"));
+    check("captions switched back off for a viewer who had them off", !captionsOn && moduleCalls.join() === "load,unload", moduleCalls.join());
+    await until(() => store.dsStates.VID.tracks.length, 3000);
+    const st = store.dsStates.VID;
+    check("state for the popup is stored under the video id", /^Çalışıyor/.test(st.status) && st.tracks.length === 1 && st.tracks[0].code === "en", JSON.stringify(st));
+    check("state lists the translation languages", st.translations.length === 2 && st.translations[1].name === "Türkçe", JSON.stringify(st.translations));
+
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // Paused: nothing should be running, and a seek arrives as an event.
+    await wait(300);
+    let before = frames;
+    await wait(400);
+    check("paused: no frames requested", frames === before, `${frames - before} frames`);
+    now = 60;
+    await wait(300);
+    check("paused: time change without an event is not polled", lines().some(Boolean));
+    media("seeked");
+    await until(() => !lines().some(Boolean), 3000);
+    check("paused: a seek redraws (box hidden between cues)", !lines().some(Boolean), JSON.stringify(lines()));
+
+    // Playing: frames follow the clock without any further events.
+    paused = false;
+    media("play");
+    now = 1;
+    await until(() => lines().some(Boolean), 3000);
+    check("playing: follows the clock", JSON.stringify(lines()) === '["Hello there","Merhaba?"]', JSON.stringify(lines()));
+    // Word-timed line: the full text holds its place, words show as spoken.
+    now = 20.5;
+    await until(() => spoken() === "one", 3000);
+    check("word timing: first word only", spoken() === "one" && lines()[0] === "one two three", `${spoken()} / ${lines()[0]}`);
+    now = 21.5;
+    await until(() => spoken() === "one two", 3000);
+    check("word timing: next word appears", spoken() === "one two", spoken());
+    check("unspoken words are hidden but keep their space", getComputedStyle(document.querySelector(".ds-primary .ds-rest")).visibility === "hidden");
+    now = 1;
+    await until(() => lines()[0] === "Hello there", 3000);
+    paused = true;
+    media("pause");
+    await wait(300);
+    before = frames;
+    await wait(400);
+    check("pause stops the frames again", frames === before, `${frames - before} frames`);
+
+    await chrome.storage.local.set({ secondary: "off" });
+    await until(() => /\+ 0 satır/.test(store.dsStatus || ""));
+    await until(() => lines()[0] === "Hello there", 3000);
+    check("secondary off: one line", JSON.stringify(lines()) === '["Hello there",""]', JSON.stringify(lines()) + " " + store.dsStatus);
+
+    // Switching back to a language already downloaded must not hit the network.
+    let requests = fetched.length;
+    await chrome.storage.local.set({ secondary: "tr" });
+    await until(() => /önbellek/.test(store.dsStatus || ""), 3000);
+    await until(() => lines()[1] === "Merhaba?", 3000);
+    check("cached language: instant, no requests", /önbellek/.test(store.dsStatus || "") && fetched.length === requests && lines()[1] === "Merhaba?", `${store.dsStatus} / ${fetched.length - requests} requests`);
+
+    // In-page navigation is driven by YouTube's event, not by polling the URL.
+    history.pushState(null, "", "/");
+    await wait(1500);
+    check("navigation is not polled", !!document.querySelector(".dualsubs-overlay"));
+    document.dispatchEvent(new Event("yt-navigate-finish"));
+    await until(() => !document.querySelector(".dualsubs-overlay"), 3000);
+    check("leaving the video removes the overlay", !document.querySelector(".dualsubs-overlay"));
+    history.pushState(null, "", "/watch?v=VID");
+    document.dispatchEvent(new Event("yt-navigate-finish"));
+    await until(() => lines().some(Boolean), 3000);
+    check("coming back uses the cache", fetched.length === requests && JSON.stringify(lines()) === '["Hello there","Merhaba?"]', JSON.stringify(lines()));
+
+    await chrome.storage.local.set({ enabled: false });
+    await until(() => !document.querySelector(".dualsubs-overlay") && store.dsStatus === "Kapalı.", 3000);
+    check("disabled: overlay removed", !document.querySelector(".dualsubs-overlay") && store.dsStatus === "Kapalı.", store.dsStatus);
+
+    out.push(failed ? `${failed} failed` : "all passed");
+    globalThis.testResult = { failed, text: out.join("\n") };
+    document.getElementById("out").textContent = globalThis.testResult.text;
+    document.title = failed ? "FAIL" : "PASS";
+  })();
+</script>

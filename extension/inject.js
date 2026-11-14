@@ -5,6 +5,11 @@
 // 3) Fetches subtitle files with the page's original fetch, so the request
 //    looks exactly like the player's own.
 (() => {
+  // Loaded by the manifest with world: "MAIN". A browser that ignores "world"
+  // would run this in the isolated world instead, where it is useless: bail
+  // out there, and content.js carries on in fallback mode.
+  const ext = globalThis.browser || globalThis.chrome;
+  if (ext && ext.runtime && ext.runtime.id) return;
   if (window.__dualSubsInjected) return;
   window.__dualSubsInjected = true;
 
@@ -36,8 +41,9 @@
     return origFetch(input, init);
   };
 
+  // Shorts run in their own player; the regular one stays in the page, hidden.
   function player() {
-    return document.getElementById("movie_player");
+    return document.querySelector(location.pathname.startsWith("/shorts/") ? "#shorts-player" : "#movie_player");
   }
 
   function getInfo() {
@@ -49,7 +55,17 @@
     if (!resp) resp = window.ytInitialPlayerResponse || null;
     const r = resp && resp.captions && resp.captions.playerCaptionsTracklistRenderer;
     const tracks = (r && r.captionTracks) || [];
+    const text = (n, fallback) => (n && (n.simpleText || (n.runs || []).map((x) => x.text).join(""))) || fallback;
+    let captionsOn = null;
+    try {
+      captionsOn = p && p.isSubtitlesOn ? !!p.isSubtitlesOn() : null;
+    } catch (_) {}
     return {
+      captionsOn, // null = unknown
+      translations: ((r && r.translationLanguages) || []).map((t) => ({
+        code: t.languageCode,
+        name: text(t.languageName, t.languageCode),
+      })),
       videoId: (resp && resp.videoDetails && resp.videoDetails.videoId) || null,
       tracks: tracks.map((t) => ({
         baseUrl: t.baseUrl,
@@ -57,7 +73,7 @@
         kind: t.kind || "",
         vssId: t.vssId || "",
         isTranslatable: !!t.isTranslatable,
-        name: (t.name && (t.name.simpleText || (t.name.runs || []).map((x) => x.text).join(""))) || t.languageCode,
+        name: text(t.name, t.languageCode),
       })),
       defaultTrackIndex:
         r && r.audioTracks && r.audioTracks[0] && typeof r.audioTracks[0].defaultCaptionTrackIndex === "number"
@@ -83,19 +99,36 @@
     }
   }
 
+  // Undo enableCaptions for a viewer who had captions off. Unloading the module
+  // hides them without touching the viewer's saved caption preference.
+  function disableCaptions() {
+    const p = player();
+    try {
+      if (p && p.unloadModule) p.unloadModule("captions");
+    } catch (_) {}
+  }
+
   window.addEventListener("message", async (ev) => {
     const d = ev.data;
+    if (ev.origin !== location.origin) return; // not from an embedded frame
     if (!d || typeof d !== "object" || d.source !== TAG + "_CS") return;
 
-    if (d.type === "getInfo") {
+    if (d.type === "ping") {
+      window.postMessage({ source: TAG, type: "ready" }, "*");
+    } else if (d.type === "getInfo") {
       window.postMessage({ source: TAG, type: "info", id: d.id, info: getInfo() }, "*");
     } else if (d.type === "enableCaptions") {
       enableCaptions(d.languageCode, d.force);
+    } else if (d.type === "disableCaptions") {
+      disableCaptions();
     } else if (d.type === "fetch") {
       let ok = false;
       let text = "";
       try {
-        const res = await origFetch(d.url, { credentials: "include" });
+        // Subtitle files only: never a general-purpose credentialed fetch.
+        const u = new URL(d.url, location.href);
+        if (u.protocol !== "https:" || !/(^|\.)youtube\.com$/.test(u.hostname) || !u.pathname.includes("/api/timedtext")) throw new Error("blocked url");
+        const res = await origFetch(u.href, { credentials: "include" });
         ok = res.ok;
         text = await res.text();
       } catch (e) {

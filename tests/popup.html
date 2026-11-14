@@ -1,0 +1,89 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>running…</title>
+<!-- Runs the real popup against a stand-in extension API: one "tab" with a
+     video, and a second tab whose messages must be ignored. -->
+<div id="host"></div>
+<pre id="out">running…</pre>
+<script>
+  (async () => {
+    const out = [];
+    let failed = 0;
+    const check = (name, ok, detail = "") => {
+      if (!ok) failed++;
+      out.push(`${ok ? "ok  " : "FAIL"} ${name}${ok ? "" : "  " + detail}`);
+    };
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    try {
+      const html = await (await fetch("../extension/popup.html")).text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      doc.querySelectorAll("script,link").forEach((e) => e.remove());
+      document.getElementById("host").innerHTML = doc.body.innerHTML;
+
+      const saved = [];
+      let changed = null;
+      const push = (states) => changed({ dsStates: { newValue: states } }, "local");
+      const tabState = {
+        status: "Çalışıyor (tam mod, manifest): 10 + 10 satır.",
+        tracks: [
+          { code: "en", name: "İngilizce", auto: true },
+          { code: "de", name: "Almanca", auto: false },
+        ],
+        translations: [
+          { code: "ja", name: "Japonca" },
+          { code: "tr", name: "Türkçe" },
+        ],
+      };
+      const other = { status: "Başka sekme", tracks: [], translations: [], at: 99 };
+      // A saved language the video does not list, and a newer entry from another tab.
+      const store = { secondary: "xx", dsStates: { MINE: { ...tabState, at: 1 }, OTHER: other } };
+      window.chrome = {
+        storage: {
+          local: {
+            get: async (d) => ({ ...d, ...store }),
+            set: async (patch) => saved.push(patch),
+          },
+          onChanged: { addListener: (fn) => (changed = fn) },
+        },
+        tabs: { query: async () => [{ id: 7, url: "https://www.youtube.com/watch?v=MINE" }] },
+      };
+      for (const src of ["../extension/core.js", "../extension/popup.js"]) {
+        await new Promise((ok, bad) => {
+          const s = document.createElement("script");
+          s.src = src;
+          s.onload = ok;
+          s.onerror = bad;
+          document.body.appendChild(s);
+        });
+      }
+      await wait(200);
+
+      const $ = (id) => document.getElementById(id);
+      const groups = (id) => [...$(id).querySelectorAll("optgroup")].map((g) => g.label + ": " + [...g.children].map((o) => o.textContent).join(", "));
+      check("status is this tab's video, not the newest entry", $("status").textContent === "Durum: " + tabState.status, $("status").textContent);
+      check("lists the video's own tracks, then translations", JSON.stringify(groups("primary")) === JSON.stringify(["Bu videodaki altyazılar: İngilizce (otomatik), Almanca", "Otomatik çeviri: Japonca, Türkçe"]), JSON.stringify(groups("primary")));
+      check("fixed choices stay first", $("secondary").options[0].value === "off" && $("secondary").options[1].value === "auto" && $("primary").options[0].value === "auto");
+      check("defaults are selected", $("primary").value === "auto" && $("enabled").checked === true);
+      check("an unlisted saved language still shows as selected", $("secondary").value === "xx");
+
+      $("secondary").value = "ja";
+      $("secondary").dispatchEvent(new Event("change"));
+      check("choosing a language saves it", JSON.stringify(saved) === '[{"secondary":"ja"}]', JSON.stringify(saved));
+
+      push({ MINE: { ...tabState, at: 1 }, OTHER: { ...other, status: "Yine başka sekme", at: 100 } });
+      check("another tab's update is ignored", $("status").textContent === "Durum: " + tabState.status, $("status").textContent);
+      push({ MINE: { ...tabState, status: "Reklamın bitmesi bekleniyor…", at: 2 }, OTHER: other });
+      check("this tab's updates are shown", $("status").textContent === "Durum: Reklamın bitmesi bekleniyor…", $("status").textContent);
+      check("a status update keeps the chosen language", $("secondary").value === "ja", $("secondary").value);
+      push({ MINE: { status: "Bu videoda altyazı yok.", tracks: [], translations: [], at: 3 } });
+      check("without track data the built-in list is used", groups("primary").length === 1 && /^Otomatik çeviri: İngilizce, Türkçe/.test(groups("primary")[0]), JSON.stringify(groups("primary")).slice(0, 80));
+    } catch (e) {
+      failed++;
+      out.push("CRASH " + (e && e.stack ? e.stack : e));
+    }
+    out.push(failed ? `${failed} failed` : "all passed");
+    globalThis.testResult = { failed, text: out.join("\n") };
+    document.getElementById("out").textContent = globalThis.testResult.text;
+    document.title = failed ? "FAIL" : "PASS";
+  })();
+</script>

@@ -11,14 +11,31 @@ kendi otomatik çevirisi kullanılır.
 3. `extension` klasörünü seç. Uzantılar sekmesinde DualSubs'ı aç ve youtube.com için izin ver.
 
 Not: Geçici uzantı Safari kapanınca kaldırılır; yeniden açınca 2–3. adımı tekrarla.
-Kalıcı kurulum için Xcode ile `xcrun safari-web-extension-converter extension/`
-komutuyla bir uygulama projesi oluşturup çalıştırman gerekir.
+
+### Kalıcı kurulum (Xcode gerekir)
+
+1. App Store'dan Xcode'u kur ve bir kez aç.
+2. `sudo xcode-select -s /Applications/Xcode.app` ile etkin geliştirici dizinini Xcode yap.
+3. `xcrun safari-web-extension-converter extension/ --project-location xcode --macos-only`
+4. Açılan projeyi Xcode'da çalıştır (⌘R), sonra Safari > Ayarlar > Uzantılar'dan DualSubs'ı aç.
+   İmzasız yapı için Safari > Geliştirici > "İmzasız Uzantılara İzin Ver" gerekir.
 
 ## Kullanım
 
 - Araç çubuğundaki DualSubs simgesinden: aç/kapat, üst ve alt dil, yazı boyutu,
   arka plan saydamlığı, alt satır rengi.
-- Eklenti açıkken YouTube'un kendi altyazısı gizlenir; kapatınca geri gelir.
+- Dil menüsünde önce açık videonun kendi altyazıları, sonra YouTube'un otomatik
+  çevirebildiği diller listelenir. Durum satırı o sekmedeki videoya aittir.
+- Normal videolarda, Shorts'ta ve canlı yayın sayfalarında çalışır.
+- Otomatik altyazılarda satır yerinde durur, kelimeler söylendikçe belirir.
+- Eklenti açıkken YouTube'un kendi altyazısı gizlenir. Altyazın kapalıysa eklenti onu
+  yalnızca jetonu almak için bir anlığına açar ve yeniden kapatır.
+
+### Bilinen sınırlar
+
+- Başka sitelere gömülü oynatıcılar (`/embed/`) desteklenmez.
+- Otomatik altyazısı olmayan videolarda YouTube konuşulan dili bildirmez; "Videonun kendi
+  dili" listedeki ilk altyazıyı seçer ve bu yanlış dil olabilir. Menüden dili elle seç.
 
 ## Nasıl çalışıyor
 
@@ -30,6 +47,29 @@ jetonla iki dili `json3` olarak indirir ve videonun zamanına göre ekrana çize
 |---|---|
 | `manifest.json` | Uzantı tanımı (Manifest V3) |
 | `inject.js` | Sayfa içinde çalışır: altyazı isteğini yakalar, parça listesini verir, indirir |
-| `content.js` | Dilleri seçer, altyazıları ayrıştırır, katmanı çizer |
+| `core.js` | Saf mantık: dil seçimi, adres üretimi, `json3` ayrıştırma, etkin satır |
+| `content.js` | Akışı yönetir ve katmanı çizer |
 | `overlay.css` | Altyazı katmanının görünümü |
 | `popup.*` | Ayarlar menüsü |
+
+`inject.js` manifest'teki `"world": "MAIN"` ile doğrudan sayfaya yüklenir (Safari'de
+doğrulandı). Sayfa betiği cevap vermezse yedek moda geçilir. Hangi yolun kullanıldığı
+popup'taki durum satırında yazar: `tam mod` veya `yedek mod`.
+
+## Testler
+
+Testler gerçek bir `URL` uygulaması istediği için tarayıcıda çalışır:
+
+```bash
+python3 -m http.server 8765 --bind 127.0.0.1
+```
+
+- <http://127.0.0.1:8765/tests/> — `core.js` birim testleri.
+- <http://127.0.0.1:8765/tests/smoke.html> — gerçek `inject.js` + `content.js`, sahte bir
+  oynatıcıya karşı uçtan uca bağlantı testi. Sekme önde olmalı; arka plandaki sekmede
+  tarayıcı kare çizmediği için test beklemede kalır.
+- <http://127.0.0.1:8765/tests/popup.html> — gerçek popup, sahte bir sekmeye karşı.
+
+Sekme başlığı `PASS` ya da `FAIL` olur. Örnek altyazı dosyaları YouTube'un `json3`
+biçiminde elle yazılmıştır, kayıtlı gerçek yanıtlar değildir; testler YouTube'un
+davranışının değişip değişmediğini söyleyemez.

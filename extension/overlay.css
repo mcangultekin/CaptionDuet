@@ -21,13 +21,18 @@
 }
 
 /* Nothing to show during ads. */
-#movie_player.ad-showing .dualsubs-overlay {
+.html5-video-player.ad-showing .dualsubs-overlay {
   display: none;
 }
 
 /* Lift above the control bar when it is visible. */
 #movie_player:not(.ytp-autohide) .dualsubs-overlay {
   bottom: calc(60px + 2%);
+}
+
+/* Shorts: stay clear of the title and channel shown over the bottom of the video. */
+#shorts-player .dualsubs-overlay {
+  bottom: 24%;
 }
 
 /* One box holding both languages; its width follows the longer line. */
@@ -48,6 +53,11 @@
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
   /* Even line lengths, so a lone word or "?" isn't left on its own line. */
   text-wrap: balance;
+}
+
+/* Words not spoken yet: invisible, but still taking their space. */
+.dualsubs-overlay .ds-rest {
+  visibility: hidden;
 }
 
 .dualsubs-overlay .ds-secondary {

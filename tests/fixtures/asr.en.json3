@@ -1,0 +1,7 @@
+{"wireMagic":"pb3","events":[
+{"tStartMs":0,"dDurationMs":600000,"id":1,"wpWinPosId":1,"wsWinStyleId":1,"segs":[]},
+{"tStartMs":80,"dDurationMs":4240,"wWinId":1,"segs":[{"utf8":"so","acAsrConf":0},{"utf8":" today","tOffsetMs":200,"acAsrConf":0},{"utf8":" we","tOffsetMs":520,"acAsrConf":0},{"utf8":" begin","tOffsetMs":700,"acAsrConf":0}]},
+{"tStartMs":2150,"dDurationMs":2170,"wWinId":1,"aAppend":1,"segs":[{"utf8":"\n"}]},
+{"tStartMs":2160,"dDurationMs":4400,"wWinId":1,"segs":[{"utf8":"with","acAsrConf":0},{"utf8":" the","tOffsetMs":160,"acAsrConf":0},{"utf8":" basics","tOffsetMs":400,"acAsrConf":0}]},
+{"tStartMs":4310,"dDurationMs":2250,"wWinId":1,"aAppend":1,"segs":[{"utf8":"\n"}]}
+]}
