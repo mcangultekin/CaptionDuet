@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "CaptionDuet",
   "version": "1.4.0",
-  "description": "YouTube videolarında iki altyazıyı (ör. İngilizce + Almanca) aynı anda gösterir.",
+  "description": "Shows two subtitle tracks at once on YouTube videos, for example English and German.",
   "permissions": [
     "storage"
   ],

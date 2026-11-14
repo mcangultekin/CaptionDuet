@@ -74,6 +74,10 @@ Sekme başlığı `PASS` ya da `FAIL` olur. Örnek altyazı dosyaları YouTube'u
 biçiminde elle yazılmıştır, kayıtlı gerçek yanıtlar değildir; testler YouTube'un
 davranışının değişip değişmediğini söyleyemez.
 
+## Lisans
+
+[MIT](LICENSE) © 2026 M. Can Gültekin
+
 ## Yasal not
 
 CaptionDuet bağımsız bir projedir; YouTube veya Google ile bir bağlantısı, ortaklığı ya da
